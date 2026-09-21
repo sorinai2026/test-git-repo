@@ -152,31 +152,47 @@ function fmtUsd(n){
   return n.toLocaleString('en-US',{maximumFractionDigits:2});
 }
 
+function renderPrices(data, stale){
+  const el = document.getElementById('prices');
+  el.innerHTML = '';
+  for(const [id,sym] of Object.entries(COINS)){
+    const d = data[id];
+    if(!d) continue;
+    const change = d.usd_24h_change ?? 0;
+    const dir = change >= 0 ? 'up' : 'down';
+    const arrow = change >= 0 ? '▲' : '▼';
+    const card = document.createElement('div');
+    card.className = 'price-card';
+    card.innerHTML = `
+      <div class="sym">${sym}</div>
+      <div class="val">$${fmtUsd(d.usd)}</div>
+      <div class="chg ${dir}">${arrow} ${Math.abs(change).toFixed(2)}%</div>
+    `;
+    el.appendChild(card);
+  }
+  document.getElementById('updated').textContent =
+    (stale ? 'ultimele valori cunoscute, ' : 'actualizat ') + new Date(stale || Date.now()).toLocaleTimeString('ro-RO');
+}
+
 async function loadPrices(){
   try{
     const ids = Object.keys(COINS).join(',');
     const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    const el = document.getElementById('prices');
-    el.innerHTML = '';
-    for(const [id,sym] of Object.entries(COINS)){
-      const d = data[id];
-      if(!d) continue;
-      const change = d.usd_24h_change ?? 0;
-      const dir = change >= 0 ? 'up' : 'down';
-      const arrow = change >= 0 ? '▲' : '▼';
-      const card = document.createElement('div');
-      card.className = 'price-card';
-      card.innerHTML = `
-        <div class="sym">${sym}</div>
-        <div class="val">$${fmtUsd(d.usd)}</div>
-        <div class="chg ${dir}">${arrow} ${Math.abs(change).toFixed(2)}%</div>
-      `;
-      el.appendChild(card);
-    }
-    document.getElementById('updated').textContent = 'actualizat ' + new Date().toLocaleTimeString('ro-RO');
+    if(data.status?.error_code) throw new Error(data.status.error_message || 'API error');
+    localStorage.setItem('prices-cache', JSON.stringify({ data, ts: Date.now() }));
+    renderPrices(data);
   }catch(e){
     console.error('price load failed', e);
+    const cached = localStorage.getItem('prices-cache');
+    if(cached){
+      const { data, ts } = JSON.parse(cached);
+      renderPrices(data, ts);
+    }else{
+      document.getElementById('prices').innerHTML =
+        '<div class="price-card">Prețurile nu au putut fi încărcate momentan (limită API atinsă). Reîncearcă în curând.</div>';
+    }
   }
 }
 
@@ -213,7 +229,7 @@ async function loadNews(){
 
 loadPrices();
 loadNews();
-setInterval(loadPrices, 60_000);
+setInterval(loadPrices, 90_000);
 setInterval(loadNews, 5 * 60_000);
 </script>
 </body>
