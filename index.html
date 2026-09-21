@@ -117,6 +117,65 @@
   .news-title{font-size:.95rem;line-height:1.35}
   .news-meta{font-size:.75rem;color:var(--muted);margin-top:6px}
 
+  #install-btn{
+    display:none;
+    width:100%;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:14px 16px;
+    font-size:.95rem;
+    font-weight:700;
+    cursor:pointer;
+    margin-bottom:24px;
+  }
+  #install-btn:active{opacity:.85}
+
+  #install-modal{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.6);
+    z-index:10;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  #install-modal.open{display:flex}
+  .modal-sheet{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:16px 16px 0 0;
+    padding:20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+    max-width:480px;
+    width:100%;
+  }
+  .modal-sheet h3{margin:0 0 12px;font-size:1rem}
+  .modal-sheet ol{margin:0 0 16px;padding-left:20px;font-size:.9rem;line-height:1.6;color:var(--text)}
+  .modal-sheet .share-icon{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;height:22px;
+    border:1.5px solid var(--text);
+    border-radius:5px;
+    vertical-align:middle;
+  }
+  .modal-close{
+    width:100%;
+    background:var(--border);
+    color:var(--text);
+    border:none;
+    border-radius:10px;
+    padding:12px;
+    font-size:.9rem;
+    font-weight:600;
+    cursor:pointer;
+  }
+
   .skeleton{opacity:.5}
   footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:20px}
   footer a{color:var(--muted)}
@@ -130,6 +189,8 @@
     <h1><img src="assets/dinamo-logo.svg" alt="Dinamo București"> &amp; Crypto</h1>
     <span id="updated">se încarcă…</span>
   </header>
+
+  <button id="install-btn">📲 Apasă aici pentru adăugare în homescreen!</button>
 
   <section>
     <h2>Cripto</h2>
@@ -150,6 +211,18 @@
   <footer>
     Prețuri via Binance · Știri via Google News &middot; auto-refresh
   </footer>
+</div>
+
+<div id="install-modal">
+  <div class="modal-sheet">
+    <h3>Adaugă pe ecranul principal</h3>
+    <ol>
+      <li>Apasă butonul <span class="share-icon">⬆︎</span> <strong>Distribuie</strong> din bara Safari (jos sau sus, în funcție de model)</li>
+      <li>Alege <strong>„Adaugă pe ecranul principal”</strong> din listă</li>
+      <li>Apasă <strong>Adaugă</strong> în colțul din dreapta sus</li>
+    </ol>
+    <button class="modal-close" onclick="document.getElementById('install-modal').classList.remove('open')">Am înțeles</button>
+  </div>
 </div>
 
 <script>
@@ -244,6 +317,37 @@ loadPrices();
 loadNews();
 setInterval(loadPrices, 90_000);
 setInterval(loadNews, 5 * 60_000);
+
+// --- Install to homescreen ---
+(function(){
+  const btn = document.getElementById('install-btn');
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if(isStandalone) return; // already installed, keep button hidden
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  let deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    btn.style.display = 'flex';
+  });
+
+  if(isIOS){
+    btn.style.display = 'flex';
+  }
+
+  btn.addEventListener('click', async () => {
+    if(deferredPrompt){
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      btn.style.display = 'none';
+    }else{
+      document.getElementById('install-modal').classList.add('open');
+    }
+  });
+})();
 </script>
 </body>
 </html>
