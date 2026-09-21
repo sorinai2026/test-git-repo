@@ -22,8 +22,35 @@
     color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     padding:24px 16px 60px;
+    overflow-x:hidden;
   }
-  .wrap{max-width:760px;margin:0 auto}
+
+  .bg-band{
+    position:fixed;
+    inset:-20% -20%;
+    background:linear-gradient(135deg,
+      transparent 38%,
+      rgba(224,20,44,.22) 47%,
+      rgba(255,255,255,.14) 51%,
+      transparent 60%);
+    z-index:0;
+    pointer-events:none;
+  }
+  .bg-btc{
+    position:fixed;
+    top:-3rem;
+    right:-2rem;
+    font-size:16rem;
+    font-weight:800;
+    line-height:1;
+    color:#f7931a;
+    opacity:.18;
+    z-index:0;
+    pointer-events:none;
+    user-select:none;
+  }
+
+  .wrap{max-width:760px;margin:0 auto;position:relative;z-index:1}
   header{
     display:flex;
     align-items:center;
@@ -32,8 +59,9 @@
     flex-wrap:wrap;
     gap:8px;
   }
-  h1{font-size:1.3rem;margin:0;letter-spacing:.2px}
+  h1{font-size:1.3rem;margin:0;letter-spacing:.2px;display:flex;align-items:center;gap:8px}
   h1 span{color:var(--accent)}
+  h1 img{height:34px;width:auto}
   #updated{font-size:.75rem;color:var(--muted)}
 
   section{margin-bottom:32px}
@@ -51,7 +79,9 @@
     gap:10px;
   }
   .price-card{
-    background:var(--panel);
+    background:rgba(20,23,28,.55);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
     border:1px solid var(--border);
     border-radius:10px;
     padding:14px;
@@ -64,7 +94,9 @@
 
   .news-item{
     display:block;
-    background:var(--panel);
+    background:rgba(20,23,28,.55);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
     border:1px solid var(--border);
     border-radius:10px;
     padding:12px 14px;
@@ -82,9 +114,11 @@
 </style>
 </head>
 <body>
+<div class="bg-band" aria-hidden="true"></div>
+<div class="bg-btc" aria-hidden="true">₿</div>
 <div class="wrap">
   <header>
-    <h1><span>Dinamo</span> &amp; Crypto</h1>
+    <h1><img src="assets/dinamo-logo.svg" alt="Dinamo București"> &amp; Crypto</h1>
     <span id="updated">se încarcă…</span>
   </header>
 
