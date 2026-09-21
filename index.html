@@ -139,12 +139,12 @@
   </section>
 
   <footer>
-    Prețuri via CoinGecko · Știri via Google News &middot; auto-refresh
+    Prețuri via Binance · Știri via Google News &middot; auto-refresh
   </footer>
 </div>
 
 <script>
-const COINS = { bitcoin: 'BTC', near: 'NEAR', chainlink: 'LINK' };
+const COINS = { BTCUSDT: 'BTC', NEARUSDT: 'NEAR', LINKUSDT: 'LINK' };
 const NEWS_QUERY = '"Dinamo Bucuresti"';
 
 function fmtUsd(n){
@@ -158,7 +158,7 @@ function renderPrices(data, stale){
   for(const [id,sym] of Object.entries(COINS)){
     const d = data[id];
     if(!d) continue;
-    const change = d.usd_24h_change ?? 0;
+    const change = d.change ?? 0;
     const dir = change >= 0 ? 'up' : 'down';
     const arrow = change >= 0 ? '▲' : '▼';
     const card = document.createElement('div');
@@ -176,11 +176,15 @@ function renderPrices(data, stale){
 
 async function loadPrices(){
   try{
-    const ids = Object.keys(COINS).join(',');
-    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+    const symbols = encodeURIComponent(JSON.stringify(Object.keys(COINS)));
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${symbols}`);
     if(!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if(data.status?.error_code) throw new Error(data.status.error_message || 'API error');
+    const rows = await res.json();
+    if(!Array.isArray(rows)) throw new Error(rows.msg || 'API error');
+    const data = {};
+    for(const row of rows){
+      data[row.symbol] = { usd: parseFloat(row.lastPrice), change: parseFloat(row.priceChangePercent) };
+    }
     localStorage.setItem('prices-cache', JSON.stringify({ data, ts: Date.now() }));
     renderPrices(data);
   }catch(e){
