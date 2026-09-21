@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dinamo &amp; Crypto</title>
+<style>
+  :root{
+    --bg:#0b0d10;
+    --panel:#14171c;
+    --border:#22262d;
+    --text:#e8eaed;
+    --muted:#8b929c;
+    --accent:#e0142c; /* Dinamo red */
+    --up:#3ecf70;
+    --down:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:24px 16px 60px;
+  }
+  .wrap{max-width:760px;margin:0 auto}
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  h1{font-size:1.3rem;margin:0;letter-spacing:.2px}
+  h1 span{color:var(--accent)}
+  #updated{font-size:.75rem;color:var(--muted)}
+
+  section{margin-bottom:32px}
+  h2{
+    font-size:.8rem;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--muted);
+    margin:0 0 10px;
+  }
+
+  .prices{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:10px;
+  }
+  .price-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px;
+  }
+  .price-card .sym{font-size:.85rem;color:var(--muted)}
+  .price-card .val{font-size:1.4rem;font-weight:600;margin:4px 0}
+  .price-card .chg{font-size:.85rem;font-weight:600}
+  .up{color:var(--up)}
+  .down{color:var(--down)}
+
+  .news-item{
+    display:block;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-bottom:8px;
+    text-decoration:none;
+    color:var(--text);
+  }
+  .news-item:hover{border-color:var(--accent)}
+  .news-title{font-size:.95rem;line-height:1.35}
+  .news-meta{font-size:.75rem;color:var(--muted);margin-top:6px}
+
+  .skeleton{opacity:.5}
+  footer{text-align:center;color:var(--muted);font-size:.75rem;margin-top:20px}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span>Dinamo</span> &amp; Crypto</h1>
+    <span id="updated">se încarcă…</span>
+  </header>
+
+  <section>
+    <h2>Cripto</h2>
+    <div class="prices" id="prices">
+      <div class="price-card skeleton"><div class="sym">BTC</div><div class="val">—</div></div>
+      <div class="price-card skeleton"><div class="sym">NEAR</div><div class="val">—</div></div>
+      <div class="price-card skeleton"><div class="sym">LINK</div><div class="val">—</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Ultimele știri Dinamo București</h2>
+    <div id="news">
+      <div class="news-item skeleton"><div class="news-title">Se încarcă știrile…</div></div>
+    </div>
+  </section>
+
+  <footer>
+    Prețuri via CoinGecko · Știri via Google News &middot; auto-refresh
+  </footer>
+</div>
+
+<script>
+const COINS = { bitcoin: 'BTC', near: 'NEAR', chainlink: 'LINK' };
+const NEWS_QUERY = '"Dinamo Bucuresti"';
+
+function fmtUsd(n){
+  if(n >= 100) return n.toLocaleString('en-US',{maximumFractionDigits:0});
+  return n.toLocaleString('en-US',{maximumFractionDigits:2});
+}
+
+async function loadPrices(){
+  try{
+    const ids = Object.keys(COINS).join(',');
+    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+    const data = await res.json();
+    const el = document.getElementById('prices');
+    el.innerHTML = '';
+    for(const [id,sym] of Object.entries(COINS)){
+      const d = data[id];
+      if(!d) continue;
+      const change = d.usd_24h_change ?? 0;
+      const dir = change >= 0 ? 'up' : 'down';
+      const arrow = change >= 0 ? '▲' : '▼';
+      const card = document.createElement('div');
+      card.className = 'price-card';
+      card.innerHTML = `
+        <div class="sym">${sym}</div>
+        <div class="val">$${fmtUsd(d.usd)}</div>
+        <div class="chg ${dir}">${arrow} ${Math.abs(change).toFixed(2)}%</div>
+      `;
+      el.appendChild(card);
+    }
+    document.getElementById('updated').textContent = 'actualizat ' + new Date().toLocaleTimeString('ro-RO');
+  }catch(e){
+    console.error('price load failed', e);
+  }
+}
+
+async function loadNews(){
+  try{
+    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(NEWS_QUERY)}&hl=ro&gl=RO&ceid=RO:ro`;
+    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+    const res = await fetch(apiUrl);
+    const data = await res.json();
+    const el = document.getElementById('news');
+    el.innerHTML = '';
+    (data.items || []).slice(0, 10).forEach(item => {
+      const a = document.createElement('a');
+      a.className = 'news-item';
+      a.href = item.link;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      const date = new Date(item.pubDate).toLocaleString('ro-RO', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      const source = (item.title.match(/-\s*([^-]+)$/) || [])[1] || '';
+      a.innerHTML = `
+        <div class="news-title">${item.title.replace(/\s*-\s*[^-]+$/, '')}</div>
+        <div class="news-meta">${date}${source ? ' · ' + source : ''}</div>
+      `;
+      el.appendChild(a);
+    });
+    if(!data.items || !data.items.length){
+      el.innerHTML = '<div class="news-item">Nicio știre găsită momentan.</div>';
+    }
+  }catch(e){
+    document.getElementById('news').innerHTML = '<div class="news-item">Știrile nu au putut fi încărcate.</div>';
+    console.error('news load failed', e);
+  }
+}
+
+loadPrices();
+loadNews();
+setInterval(loadPrices, 60_000);
+setInterval(loadNews, 5 * 60_000);
+</script>
+</body>
+</html>
